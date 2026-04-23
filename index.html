@@ -1079,6 +1079,7 @@ footer{background:rgba(2,11,10,0.98);border-top:1px solid var(--border);padding:
         </div>
         <div class="form-title">📋 Enrollment Form</div>
         <div class="form-group"><label class="form-label">Student Name *</label><input class="form-input" type="text" id="f-name" placeholder="Enter full name"></div>
+        <div class="form-group"><label class="form-label">Age</label><input class="form-input" type="number" id="f-age" placeholder="e.g. 14" min="4" max="40"></div>
         <div class="form-group"><label class="form-label">Parent / Guardian Name</label><input class="form-input" type="text" id="f-parent" placeholder="Father or Guardian name"></div>
         <div class="form-group"><label class="form-label">WhatsApp Number *</label><input class="form-input" type="tel" id="f-phone" placeholder="03XX-XXXXXXX"></div>
         <div class="form-group"><label class="form-label">Gender</label><select class="form-input" id="f-gender"><option value="">Select...</option><option>Female</option><option>Male</option></select></div>
@@ -1855,7 +1856,7 @@ function handleEnrollmentStep(msg){
 // FORM TO WHATSAPP + N8N (unchanged)
 // ═══════════════════════════════════════════════
 async function submitForm(){
-  const name=document.getElementById('f-name').value.trim(); const parent=document.getElementById('f-parent').value.trim();
+  const name=document.getElementById('f-name').value.trim(); const age=document.getElementById('f-age').value.trim(); const parent=document.getElementById('f-parent').value.trim();
   const phone=document.getElementById('f-phone').value.trim(); const gender=document.getElementById('f-gender').value;
   const cls=document.getElementById('f-class').value; const mode=document.getElementById('f-mode').value;
   const course=document.getElementById('f-course').value; const msg=document.getElementById('f-msg').value.trim();
@@ -1863,8 +1864,8 @@ async function submitForm(){
   const btn=document.getElementById('formSubmitBtn'); const txt=document.getElementById('formSubmitTxt');
   btn.disabled=true; txt.textContent='Sending...';
   try {
-    const res=await fetch(N8N_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'admission_form',sessionId:'form_'+Date.now(),data:{name,parent,phone,gender,class:cls,mode,course,message:msg},source:'website_form',timestamp:new Date().toISOString()})});
-    if(res.ok){ txt.textContent='✅ Sent!'; btn.style.background='linear-gradient(135deg,#059669,#10b981)'; ['f-name','f-parent','f-phone','f-msg'].forEach(id=>document.getElementById(id).value=''); ['f-gender','f-class','f-mode','f-course'].forEach(id=>document.getElementById(id).selectedIndex=0); setTimeout(()=>{ txt.textContent='Send Admission'; btn.disabled=false; btn.style.background=''; },4000); }
+    const res=await fetch(N8N_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'admission_form',sessionId:'form_'+Date.now(),data:{name,age,parent,phone,gender,class:cls,mode,course,message:msg},source:'website_form',timestamp:new Date().toISOString()})});
+    if(res.ok){ txt.textContent='✅ Sent!'; btn.style.background='linear-gradient(135deg,#059669,#10b981)'; ['f-name','f-age','f-parent','f-phone','f-msg'].forEach(id=>document.getElementById(id).value=''); ['f-gender','f-class','f-mode','f-course'].forEach(id=>document.getElementById(id).selectedIndex=0); setTimeout(()=>{ txt.textContent='Send Admission'; btn.disabled=false; btn.style.background=''; },4000); }
     else throw new Error('Server error');
   } catch(err){ txt.textContent='Failed — Try Again'; btn.style.background='linear-gradient(135deg,#dc2626,#ef4444)'; btn.disabled=false; setTimeout(()=>{ txt.textContent='Send Admission'; btn.style.background=''; },3000); }
 }
