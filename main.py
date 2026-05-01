@@ -36,10 +36,7 @@ RESEND_API_KEY  = os.environ.get("RESEND_API_KEY", "")
 BACKEND_URL     = os.environ.get("BACKEND_URL",   "https://your-app.onrender.com")
 
 ADMIN_EMAILS = [
-    "mahamkhalid480@gmail.com",
-    "anasjaved375@gmail.com",
-    "anasjaved498@gmail.com",
-    "atkajaved@gmail.com",
+    "mahamkhalid1523@gmail.com",  # Resend verified email — receives all notifications
 ]
 
 # ══════════════════════════════════════════
