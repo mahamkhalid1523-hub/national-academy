@@ -1,9 +1,6 @@
 import os
-import smtplib
 import uuid
 import threading
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 import httpx
 from fastapi import FastAPI, Request
@@ -15,7 +12,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_check():
     print(f"✅ GMAIL_FROM: {GMAIL_FROM}")
-    print(f"✅ GMAIL_PASSWORD set: {'YES' if GMAIL_PASSWORD else 'NO ❌'}")
+    print(f"✅ RESEND_API_KEY set: {'YES' if RESEND_API_KEY else 'NO ❌'}")
     print(f"✅ GROQ_API_KEY set: {'YES' if GROQ_API_KEY else 'NO ❌'}")
     print(f"✅ SUPA_URL: {SUPA_URL}")
     print(f"✅ SUPA_SERVICE_KEY set: {'YES' if SUPA_SERVICE_KEY else 'NO ❌'}")
@@ -32,12 +29,10 @@ app.add_middleware(
 # CONFIG — loaded from Render environment
 # ══════════════════════════════════════════
 GMAIL_FROM      = os.environ.get("GMAIL_FROM",    "mahamkhalid480@gmail.com")
-GMAIL_PASSWORD  = os.environ.get("GMAIL_PASSWORD", "")   # App Password
 GROQ_API_KEY    = os.environ.get("GROQ_API_KEY",   "")
 SUPA_URL        = os.environ.get("SUPA_URL",       "https://aahgqcrcbjddmryqptah.supabase.co")
 SUPA_SERVICE_KEY= os.environ.get("SUPA_SERVICE_KEY","")
-
-# Your Render app public URL — set this after first deploy
+RESEND_API_KEY  = os.environ.get("RESEND_API_KEY", "")
 BACKEND_URL     = os.environ.get("BACKEND_URL",   "https://your-app.onrender.com")
 
 ADMIN_EMAILS = [
@@ -48,30 +43,41 @@ ADMIN_EMAILS = [
 ]
 
 # ══════════════════════════════════════════
-# EMAIL HELPER
+# EMAIL HELPER — using Resend HTTP API
 # ══════════════════════════════════════════
-def send_email(to: str, subject: str, html_body: str):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = GMAIL_FROM
-    msg["To"]      = to
-    msg.attach(MIMEText(html_body, "html"))
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(GMAIL_FROM, GMAIL_PASSWORD)
-        server.sendmail(GMAIL_FROM, to, msg.as_string())
+async def send_email_resend(to: str, subject: str, html_body: str):
+    async with httpx.AsyncClient(timeout=15) as client:
+        res = await client.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": f"National Academy <onboarding@resend.dev>",
+                "to": [to],
+                "subject": subject,
+                "html": html_body,
+            }
+        )
+        if res.status_code not in (200, 201):
+            print(f"❌ Resend error to {to}: {res.text}")
+        else:
+            print(f"✅ Email sent to {to}")
 
 def send_to_all_admins_background(subject: str, html_body: str):
-    """Send emails in a background thread so response is instant."""
+    import asyncio
     def _send():
-        for email in ADMIN_EMAILS:
-            try:
-                send_email(email, subject, html_body)
-                print(f"✅ Email sent to {email}")
-            except Exception as e:
-                print(f"❌ Email failed to {email}: {e}")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        async def _all():
+            for email in ADMIN_EMAILS:
+                try:
+                    await send_email_resend(email, subject, html_body)
+                except Exception as e:
+                    print(f"❌ Email failed to {email}: {e}")
+        loop.run_until_complete(_all())
+        loop.close()
     t = threading.Thread(target=_send, daemon=True)
     t.start()
 
@@ -204,7 +210,7 @@ async def groq_chat(messages: list) -> str:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "llama3-8b-8192",
+                    "model": "llama-3.3-70b-versatile",
                     "messages": messages,
                     "max_tokens": 400,
                     "temperature": 0.7,
