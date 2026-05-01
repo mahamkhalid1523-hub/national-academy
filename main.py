@@ -12,6 +12,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 app = FastAPI()
 
+@app.on_event("startup")
+async def startup_check():
+    print(f"✅ GMAIL_FROM: {GMAIL_FROM}")
+    print(f"✅ GMAIL_PASSWORD set: {'YES' if GMAIL_PASSWORD else 'NO ❌'}")
+    print(f"✅ GROQ_API_KEY set: {'YES' if GROQ_API_KEY else 'NO ❌'}")
+    print(f"✅ SUPA_URL: {SUPA_URL}")
+    print(f"✅ SUPA_SERVICE_KEY set: {'YES' if SUPA_SERVICE_KEY else 'NO ❌'}")
+    print(f"✅ BACKEND_URL: {BACKEND_URL}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,7 +56,10 @@ def send_email(to: str, subject: str, html_body: str):
     msg["From"]    = GMAIL_FROM
     msg["To"]      = to
     msg.attach(MIMEText(html_body, "html"))
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
         server.login(GMAIL_FROM, GMAIL_PASSWORD)
         server.sendmail(GMAIL_FROM, to, msg.as_string())
 
