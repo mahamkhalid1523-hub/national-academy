@@ -1,6 +1,7 @@
 import os
 import smtplib
 import uuid
+import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -50,14 +51,17 @@ def send_email(to: str, subject: str, html_body: str):
         server.login(GMAIL_FROM, GMAIL_PASSWORD)
         server.sendmail(GMAIL_FROM, to, msg.as_string())
 
-def send_to_all_admins(subject: str, html_body: str):
-    errors = []
-    for email in ADMIN_EMAILS:
-        try:
-            send_email(email, subject, html_body)
-        except Exception as e:
-            errors.append(f"{email}: {e}")
-    return errors
+def send_to_all_admins_background(subject: str, html_body: str):
+    """Send emails in a background thread so response is instant."""
+    def _send():
+        for email in ADMIN_EMAILS:
+            try:
+                send_email(email, subject, html_body)
+                print(f"✅ Email sent to {email}")
+            except Exception as e:
+                print(f"❌ Email failed to {email}: {e}")
+    t = threading.Thread(target=_send, daemon=True)
+    t.start()
 
 # ══════════════════════════════════════════
 # SUPABASE HELPERS
@@ -194,10 +198,14 @@ async def groq_chat(messages: list) -> str:
                     "temperature": 0.7,
                 },
             )
+            print(f"Groq status: {res.status_code}")
+            if res.status_code != 200:
+                print(f"Groq error body: {res.text}")
+                return "Please WhatsApp us at 03045884090 for help. 😊"
             data = res.json()
             return data["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"Groq error: {e}")
+        print(f"Groq exception: {e}")
         return "Please WhatsApp us at 03045884090 for help. 😊"
 
 # ══════════════════════════════════════════
@@ -304,9 +312,7 @@ async def handle_post(request: Request):
         student_name = data.get("name", "New Student")
         html = build_admission_email(data)
         subject = f"New Admission — {student_name} | National Academy 2026"
-        errors = send_to_all_admins(subject, html)
-        if errors:
-            print(f"Email errors: {errors}")
+        send_to_all_admins_background(subject, html)
         return JSONResponse({
             "status": "ok",
             "message": "Admission emails sent."
@@ -320,9 +326,7 @@ async def handle_post(request: Request):
             approve_url = f"{BACKEND_URL}/webhook/academy-chatbot?reviewId={review_id}"
             html        = build_review_email(row, approve_url)
             subject     = f"✅ Approve Review — {row.get('name','')} | National Academy"
-            errors = send_to_all_admins(subject, html)
-            if errors:
-                print(f"Review email errors: {errors}")
+            send_to_all_admins_background(subject, html)
             return JSONResponse(
                 {"status": "ok", "message": "Review received. Approval email sent."},
                 headers={"Access-Control-Allow-Origin": "*"}
