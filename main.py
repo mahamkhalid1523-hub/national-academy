@@ -51,29 +51,29 @@ async def send_email_resend(to: str, subject: str, html_body: str):
                 "Content-Type": "application/json",
             },
             json={
-                "from": f"National Academy <onboarding@resend.dev>",
-                "to": [to],
+                "from": "National Academy <onboarding@resend.dev>",
+                "to": ["mahamkhalid1523@gmail.com"],
+                "cc": [
+                    "mahamkhalid480@gmail.com",
+                    "anasjaved375@gmail.com",
+                    "anasjaved498@gmail.com",
+                    "atkajaved@gmail.com"
+                ],
                 "subject": subject,
                 "html": html_body,
             }
         )
         if res.status_code not in (200, 201):
-            print(f"❌ Resend error to {to}: {res.text}")
+            print(f"❌ Resend error: {res.text}")
         else:
-            print(f"✅ Email sent to {to}")
+            print(f"✅ Email sent to all admins")
 
 def send_to_all_admins_background(subject: str, html_body: str):
     import asyncio
     def _send():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        async def _all():
-            for email in ADMIN_EMAILS:
-                try:
-                    await send_email_resend(email, subject, html_body)
-                except Exception as e:
-                    print(f"❌ Email failed to {email}: {e}")
-        loop.run_until_complete(_all())
+        loop.run_until_complete(send_email_resend("mahamkhalid1523@gmail.com", subject, html_body))
         loop.close()
     t = threading.Thread(target=_send, daemon=True)
     t.start()
